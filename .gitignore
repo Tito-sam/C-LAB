@@ -1,1 +1,12 @@
+# Ejecutable
 clab
+
+# Archivos objeto
+*.o
+
+# Datos generados
+datos/*.csv
+
+# Python
+__pycache__/
+*.pyc
