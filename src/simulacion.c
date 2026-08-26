@@ -4,6 +4,7 @@
 
 #include "../include/fisica.h"
 #include "../include/simulacion.h"
+#include "../include/datos.h"
 
 void simulacion(void) {
     double velocidad;
@@ -12,9 +13,8 @@ void simulacion(void) {
     printf("========================\n");
     printf("-------Simulacion-------.\n");
     printf("========================\n");
-    FILE *archivo = fopen("datos/resultados_euler.csv", "w");
+    FILE *archivo = crear_archivo_resultados("datos/resultados_euler.csv");
     if (archivo == NULL) {
-        printf("Error al crear el archivo \n");
         return;
     }
     printf("Digita la velocidad en m/s: ");
@@ -59,7 +59,11 @@ void simulacion(void) {
         posicion_final_x_euler = posicion_tiempo_exacto_euler( velocidad, angulo, pasos[i], gravedad, tiempo_comparacion);
         error_nuevo = calcular_error(posicion_y_exacta, posicion_final_x_euler);
         double error_porcentual = error_nuevo*100/posicion_y_exacta;
-        fprintf(archivo,"%.3f,%.3f,%.3f\n",pasos[i],error_nuevo,error_porcentual);
+        struct ResultadosEuler resultado;
+        resultado.dt = pasos[i];
+        resultado.error = error_nuevo;
+        resultado.error_porcentual = error_porcentual;
+        escribir_resultado_euler(archivo, resultado);
         printf("%.3f m   %.3f m    %.3f     %.3f\n", posicion_y_exacta, posicion_final_x_euler, error_nuevo, error_porcentual);
         if (i!= 0){
             orden = calcular_orden(error_previo,error_nuevo,pasos[i-1],pasos[i]);
@@ -67,7 +71,7 @@ void simulacion(void) {
         }
         error_previo = error_nuevo;
     }
-    fclose(archivo);
+    cerrar_archivo_resultados(archivo);
 }
 
 void actualizar_estado(struct Estado *estado, double dt, double gravedad) {

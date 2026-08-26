@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -std=c17
 LDFLAGS = -lm
 
-SRC = src/main.c src/fisica.c src/simulacion.c
+SRC = src/main.c src/fisica.c src/simulacion.c src/datos.c
 OBJ = $(SRC:.c=.o)
 
 TARGET = clab
