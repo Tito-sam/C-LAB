@@ -7,7 +7,7 @@ pasos = []
 errores = []
 errores_por = []
 
-with open("resultados_euler.csv", "r") as archivo:
+with open("../datos/resultados_euler.csv", "r") as archivo:
     lector = csv.DictReader(archivo)
     for fila in lector:
         dt = float(fila["dt"])
