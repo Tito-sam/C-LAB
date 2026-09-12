@@ -7,9 +7,7 @@
 #include "../include/datos.h"
 
 void simulacion(void) {
-    double velocidad;
-    double angulo;
-    double gravedad;
+    ParametrosSimulacion parametros;
     printf("========================\n");
     printf("-------Simulacion-------.\n");
     printf("========================\n");
@@ -18,18 +16,18 @@ void simulacion(void) {
         return;
     }
     printf("Digita la velocidad en m/s: ");
-    scanf("%lf",&velocidad);
+    scanf("%lf",&parametros.velocidad);
     printf("Digita el angulo en °: ");
-    scanf("%lf",&angulo);
+    scanf("%lf",&parametros.angulo);
     printf("Digita la gravedad en m/s²: ");
-    scanf("%lf",&gravedad);
+    scanf("%lf",&parametros.gravedad);
     // mostrar_datos( velocidad, angulo, gravedad);
     // modificar_velocidad(&velocidad);
     // printf("Velocidad despues de modificar: %.2f", velocidad);
     
-    double alcance = calcular_alcance(velocidad,angulo,gravedad);
-    double tiempo_vuelo = calcular_tiempo_vuelo(velocidad,angulo,gravedad);
-    double altura_maxima = calcular_altura_maxima(velocidad,angulo,gravedad);
+    double alcance = calcular_alcance(parametros);
+    double tiempo_vuelo = calcular_tiempo_vuelo(parametros);
+    double altura_maxima = calcular_altura_maxima(parametros);
 
     printf("========================\n");
     printf("Resultados de la simulacion.\n");
@@ -39,9 +37,9 @@ void simulacion(void) {
     printf("El tiempo de vuelo es de: %.2f s\n", tiempo_vuelo);
     printf("La altura máxima es de: %.2f m\n", altura_maxima);
     double dt = 0.1;
-    posiciones_exacta(velocidad, angulo,dt, gravedad, tiempo_vuelo);
+    posiciones_exacta(parametros, dt, tiempo_vuelo);
     dt = 0.1;
-    posiciones_euler(velocidad, angulo,dt, gravedad);
+    posiciones_euler(dt, parametros);
 
     double pasos[] = {0.1,0.05,0.01, 0.005, 0.001};
     printf("Posicion Exacta    Euler      Error       Error Porcentual\n");
@@ -54,16 +52,15 @@ void simulacion(void) {
     double orden;
     double tiempo_comparacion = 1.4;
     size_t cantidad_pasos = sizeof(pasos)/sizeof(pasos[0]);
+    ResultadosEuler resultados[cantidad_pasos];
     for (size_t i = 0; i < cantidad_pasos; i++) {
-        posicion_y_exacta = calcular_y(velocidad, angulo, tiempo_comparacion, gravedad);
-        posicion_final_x_euler = posicion_tiempo_exacto_euler( velocidad, angulo, pasos[i], gravedad, tiempo_comparacion);
+        posicion_y_exacta = calcular_y(parametros, tiempo_comparacion);
+        posicion_final_x_euler = posicion_tiempo_exacto_euler(pasos[i],parametros, tiempo_comparacion);
         error_nuevo = calcular_error(posicion_y_exacta, posicion_final_x_euler);
         double error_porcentual = error_nuevo*100/posicion_y_exacta;
-        struct ResultadosEuler resultado;
-        resultado.dt = pasos[i];
-        resultado.error = error_nuevo;
-        resultado.error_porcentual = error_porcentual;
-        escribir_resultado_euler(archivo, resultado);
+        resultados[i].dt = pasos[i];
+        resultados[i].error = error_nuevo;
+        resultados[i].error_porcentual = error_porcentual;
         printf("%.3f m   %.3f m    %.3f     %.3f\n", posicion_y_exacta, posicion_final_x_euler, error_nuevo, error_porcentual);
         if (i!= 0){
             orden = calcular_orden(error_previo,error_nuevo,pasos[i-1],pasos[i]);
@@ -71,39 +68,40 @@ void simulacion(void) {
         }
         error_previo = error_nuevo;
     }
+    escribir_resultado_euler(archivo, resultados, cantidad_pasos);
     cerrar_archivo_resultados(archivo);
 }
 
-void actualizar_estado(struct Estado *estado, double dt, double gravedad) {
+void actualizar_estado( Estado *estado, double dt, ParametrosSimulacion parametros) {
 
     estado->x += estado->velocidad_x * dt;
 
     estado->y += estado->velocidad_y * dt;
 
-    estado->velocidad_y -= gravedad * dt;
+    estado->velocidad_y -= parametros.gravedad * dt;
 }
 
 
-void posiciones_exacta(double velocidad,double angulo, double dt, double gravedad, double tiempo_vuelo) {
+void posiciones_exacta(ParametrosSimulacion parametros, double dt, double tiempo_vuelo) {
     printf("Tabla de posicion exacta con un intervalo de %.1f \n", dt);
     printf("Tiempo       X         Y       \n");
     printf("-------------------------------\n");
     double tiempo = 0.0;
     while (tiempo <= tiempo_vuelo) {
-        double posicion_x = calcular_x(velocidad, angulo,tiempo);
-        double posicion_y = calcular_y(velocidad, angulo, tiempo, gravedad);
+        double posicion_x = calcular_x(parametros,tiempo);
+        double posicion_y = calcular_y(parametros,tiempo);
         printf(" %.2f      %.2f      %.2f   \n", tiempo, posicion_x, posicion_y);
         tiempo += dt;
     }
 }
 
 
-void posiciones_euler(double velocidad,double angulo, double dt, double gravedad) {
-    struct Estado proyectil;
+void posiciones_euler(double dt, ParametrosSimulacion parametros) {
+    Estado proyectil;
     proyectil.x = 0.0;
     proyectil.y = 0.0;
-    proyectil.velocidad_x = velocidad *cos(transformar_a_radianes(angulo));
-    proyectil.velocidad_y = velocidad *sin(transformar_a_radianes(angulo));
+    proyectil.velocidad_x = parametros.velocidad *cos(transformar_a_radianes(parametros.angulo));
+    proyectil.velocidad_y = parametros.velocidad *sin(transformar_a_radianes(parametros.angulo));
     printf("\nEstado inicial:\n");
     printf("x  = %.3f m\n", proyectil.x);
     printf("y  = %.3f m\n", proyectil.y);
@@ -130,18 +128,23 @@ void posiciones_euler(double velocidad,double angulo, double dt, double gravedad
     printf("-------------------------------\n");
     while(proyectil.y >= 0) {
         printf(" %.2f      %.3f      %.3f   \n", tiempo, proyectil.x, proyectil.y);
-        actualizar_estado(&proyectil, dt, gravedad);
+        actualizar_estado(&proyectil, dt, parametros);
         tiempo += dt;
     }
 }
 
-double posicion_tiempo_exacto_euler(double velocidad,double angulo, double dt, double gravedad, double tiempo_exacto) {
-    struct Estado proyectil;
-    // Definimos Valor inicial de la velocidad tanto en X como en Y con el valor de velocidad inicial que nos ingresaron
-    proyectil.velocidad_y = velocidad*sin(transformar_a_radianes(angulo));
+double posicion_tiempo_exacto_euler(double dt, ParametrosSimulacion parametros, double tiempo_exacto) {
+    Estado proyectil;
+
+    proyectil.x = 0.0;
+    proyectil.y = 0.0;
+
+    proyectil.velocidad_x = parametros.velocidad * cos(transformar_a_radianes(parametros.angulo));
+
+    proyectil.velocidad_y = parametros.velocidad * sin(transformar_a_radianes(parametros.angulo));
     double tiempo = 0;
     while(tiempo <= tiempo_exacto) {
-        actualizar_estado(&proyectil,dt, gravedad);
+        actualizar_estado(&proyectil,dt, parametros);
         tiempo += dt;
     }
     return proyectil.y;

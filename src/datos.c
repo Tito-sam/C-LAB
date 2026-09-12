@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdio.h>
 #include "../include/datos.h"
 
@@ -19,7 +20,9 @@ void cerrar_archivo_resultados(FILE *archivo) {
     }
 }
 
-void escribir_resultado_euler(FILE *archivo, struct ResultadosEuler resultado) {
-            fprintf(archivo,"%.3f,%.3f,%.3f\n",resultado.dt,resultado.error,resultado.error_porcentual);
+void escribir_resultado_euler(FILE *archivo, ResultadosEuler resultado[], size_t tam_array) {
+    for (size_t i = 0; i < tam_array; i++) {
+        fprintf(archivo,"%.3f,%.3f,%.3f\n",resultado[i].dt,resultado[i].error,resultado[i].error_porcentual);
+    }
 
 }
